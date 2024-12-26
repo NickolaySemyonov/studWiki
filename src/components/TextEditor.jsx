@@ -18,7 +18,6 @@ const getStringifiedDelta = (quillReference) => {
 const setDeltaFromJSON = (quillReference, jsonDelta) => {
   // Convert JSON string to Delta object
   var parsedDelta = JSON.parse(jsonDelta);
-  //console.log(parsedDelta);
   // Set the Delta object into the Quill editor
   quillReference.current?.setContents(parsedDelta);
 };
@@ -32,16 +31,16 @@ export default function MyEditor() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const jsonDelta = getStringifiedDelta(quillRef);
-
+    const delta = getStringifiedDelta(quillRef);
     const data = {
+      user_id: 4,
       title,
-      content: jsonDelta,
+      delta,
       comment,
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/save", {
+      const response = await fetch("http://localhost:5000/api/actions/save", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -51,10 +50,10 @@ export default function MyEditor() {
 
       if (response.ok) {
         console.log("Data sent successfully");
-        alert("статья успешно отправлена в предложку!");
+        alert("Статья успешно отправлена в предложку!");
       } else {
         console.error("Failed to send data");
-        alert("размер статьи превышает 10 мб!");
+        alert("Возникла ошибка! Статья НЕ была отправлена в предложку");
       }
     } catch (error) {
       console.error("Error:", error);
