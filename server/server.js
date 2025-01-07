@@ -1,18 +1,19 @@
 // server/server.js
+require('dotenv').config();
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT||5000;// process.env.PORT||5000
 
 const { Pool } = require("pg");
 
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "studWiki",
-  password: "admin",
-  port: 5433,
+  user: process.env.DB_USER,
+  host:  process.env.DB_HOST,
+  database:  process.env.DB_NAME,
+  password:  process.env.DB_PASSWD,
+  port: process.env.DB_PORT,
 });
 const connectDB = async () => {
   try {
@@ -26,7 +27,14 @@ const connectDB = async () => {
 connectDB();
 
 // Middleware
-app.use(cors());
+//app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5001', // Access from only this domain
+  methods: ['GET', 'POST'], 
+  allowedHeaders: ['Content-Type'],
+  credentials: true // Allow cookies
+}));
+
 // Increase the limit for JSON and URL-encoded payloads
 app.use(bodyParser.json({ limit: "10mb", extended: true }));
 app.use(
@@ -40,7 +48,7 @@ app.use(
 // Sample route
 app.get("/api/suggested/all", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM suggested_all"); // Представление
+    const result = await pool.query("SELECT * FROM suggested_all"); // VIEW
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching suggested items:", error);
@@ -50,7 +58,6 @@ app.get("/api/suggested/all", async (req, res) => {
 
 app.get("/api/articles/:id", async (req, res) => {
   const articleId = parseInt(req.params.id);
-  // console.log(articleId);
   try {
     const result = await pool.query(
       `
@@ -63,7 +70,7 @@ app.get("/api/articles/:id", async (req, res) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    res.json(result.rows[0]); // Возвращаем первую (и единственную) строку
+    res.json(result.rows[0]); // Возвращаем первую (и единственную) запись
   } catch (error) {
     console.error("Error fetching article:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -90,20 +97,31 @@ app.get("/api/articles/", async (req, res) => {
 
 app.post("/api/actions/save", async (req, res) => {
   const { user_id, title, delta, comment } = req.body;
-  // Log the data to the console (or you can save it to a database)
   console.log("Received data:", { user_id, title, delta, comment });
+  // let chooseTableToSave;
+
+  // switch (type) {
+  //   case "new":
+  //     chooseTableToSave = "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
+  //     break;
+  //   case "edit":
+  //     chooseTableToSave = "INSERT INTO suggested_edit (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
+  //     break;
+  //   case "delete":
+  //     chooseTableToSave = "INSERT INTO suggested_deletion (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
+  //     break;
+  //   default:
+  //     break;
+  // }
 
   try {
     // Save the data to PostgreSQL
     const result = await pool.query(
-      "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4) RETURNING *",
+      "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)",
       [user_id, title, delta, comment]
     );
 
-    // Send a response back
-    res
-      .status(200)
-      .json({ message: "Data received successfully", data: result.rows[0] });
+    res.status(200).json({ message: "Data received successfully" });
   } catch (error) {
     console.error("Error saving data to PostgreSQL:", error);
     res.status(500).json({ message: "Error saving data", error });
@@ -116,7 +134,6 @@ app.post("/api/actions/manageSuggested", async (req, res) => {
 
   try {
     // Save the data to PostgreSQL
-
     let manageSuggestedQuery;
 
     switch (type) {
@@ -138,7 +155,6 @@ app.post("/api/actions/manageSuggested", async (req, res) => {
       status,
     ]);
 
-    // Send a response back
     res.status(200).json({
       message: "Suggstion managed successfully.",
     });

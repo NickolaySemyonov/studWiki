@@ -49,8 +49,8 @@ export default function MyEditor() {
       });
 
       if (response.ok) {
-        console.log("Data sent successfully");
-        alert("Статья успешно отправлена в предложку!");
+        const jsonResponse = await response.json();
+        alert(jsonResponse.message);
       } else {
         console.error("Failed to send data");
         alert("Возникла ошибка! Статья НЕ была отправлена в предложку");
@@ -62,6 +62,8 @@ export default function MyEditor() {
 
   return (
     <ContentWrapper>
+      <h1 className="text-2xl font-bold mb-4 text-center">Editor</h1>
+      <hr className="h-px my-8 bg-gray-200 border-0" />
       <form onSubmit={handleSubmit}>
         <label
           htmlFor="title"

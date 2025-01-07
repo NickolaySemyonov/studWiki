@@ -7,4 +7,7 @@ export default defineConfig({
   define: {
     global: {},
   },
+  server:{
+    port:5001
+  }
 });
