@@ -1,9 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Editor from "./Editor";
 import Quill from "quill";
 import ContentWrapper from "./ContentWrapper";
+import { useParams } from "react-router-dom";
 
 const Delta = Quill.import("delta");
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const getStringifiedDelta = (quillReference) => {
   // Get editor contents converted to Delta object
@@ -24,29 +26,73 @@ const setDeltaFromJSON = (quillReference, jsonDelta) => {
 
 export default function MyEditor() {
   const [title, setTitle] = useState("");
-  const [comment, setComment] = useState("");
+  const [annotation, setAnnotation] = useState("");
   const [readOnly, setReadOnly] = useState(false);
   const quillRef = useRef();
+
+  const { articleId } = useParams();
+
+  useEffect(() => {
+    const fetchDeltaFromApi = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/api/articles/${articleId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch article");
+        }
+        const data = await response.json();
+        console.log(data);
+
+        setDeltaFromJSON(quillRef, data.delta);
+      } catch (err) {
+        console.log(err.message);
+      }
+    };
+    fetchDeltaFromApi();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const delta = getStringifiedDelta(quillRef);
-    const data = {
-      user_id: 4,
-      title,
-      delta,
-      comment,
-    };
 
+    let response;
+    let data;
     try {
-      const response = await fetch("http://localhost:5000/api/actions/save", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      if (!articleId) {
+        data = {
+          user_id: 4,
+          title,
+          delta,
+          annotation,
+        };
+        response = await fetch(`${apiUrl}/api/actions/save/new`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+      } else {
+        data = {
+          article_id: articleId,
+          user_id: 4,
+          title,
+          delta,
+          annotation,
+        };
+        response = await fetch(`${apiUrl}/api/actions/save/edit`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+      }
 
       if (response.ok) {
         const jsonResponse = await response.json();
@@ -97,19 +143,19 @@ export default function MyEditor() {
 
         <br />
         <label
-          htmlFor="comment"
+          htmlFor="annotation"
           className="block text-sm font-medium text-gray-700 mb-2"
         >
           Comment:
         </label>
         <input
           type="text"
-          id="comment"
-          name="comment"
+          id="annotation"
+          name="annotation"
           placeholder="Please, leave a comment..."
           required
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          value={annotation}
+          onChange={(e) => setAnnotation(e.target.value)}
           className="block w-full border border-gray-300 rounded-md p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
         <button

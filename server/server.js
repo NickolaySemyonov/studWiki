@@ -1,18 +1,22 @@
 // server/server.js
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 const bodyParser = require("body-parser");
 const app = express();
-const PORT = process.env.PORT||5000;// process.env.PORT||5000
+const PORT = process.env.PORT; // process.env.PORT||5000
+const JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 const { Pool } = require("pg");
 
 const pool = new Pool({
   user: process.env.DB_USER,
-  host:  process.env.DB_HOST,
-  database:  process.env.DB_NAME,
-  password:  process.env.DB_PASSWD,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWD,
   port: process.env.DB_PORT,
 });
 const connectDB = async () => {
@@ -28,12 +32,15 @@ connectDB();
 
 // Middleware
 //app.use(cors());
-app.use(cors({
-  origin: 'http://localhost:5001', // Access from only this domain
-  methods: ['GET', 'POST'], 
-  allowedHeaders: ['Content-Type'],
-  credentials: true // Allow cookies
-}));
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: "http://localhost:5001", // Access from only this domain
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true, // Allow cookies
+  })
+);
 
 // Increase the limit for JSON and URL-encoded payloads
 app.use(bodyParser.json({ limit: "10mb", extended: true }));
@@ -46,7 +53,7 @@ app.use(
 );
 
 // Sample route
-app.get("/api/suggested/all", async (req, res) => {
+app.get("/api/suggested/all", authenticateToken, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM suggested_all"); // VIEW
     res.status(200).json(result.rows);
@@ -95,31 +102,40 @@ app.get("/api/articles/", async (req, res) => {
   }
 });
 
-app.post("/api/actions/save", async (req, res) => {
-  const { user_id, title, delta, comment } = req.body;
-  console.log("Received data:", { user_id, title, delta, comment });
-  // let chooseTableToSave;
+app.post("/api/actions/save/:type", async (req, res) => {
+  const { article_id, user_id, title, delta, annotation } = req.body;
+  //console.log("Received data:", { user_id, title, delta, comment });
+  let chooseTableToSave;
+  let values;
 
-  // switch (type) {
-  //   case "new":
-  //     chooseTableToSave = "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
-  //     break;
-  //   case "edit":
-  //     chooseTableToSave = "INSERT INTO suggested_edit (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
-  //     break;
-  //   case "delete":
-  //     chooseTableToSave = "INSERT INTO suggested_deletion (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)";
-  //     break;
-  //   default:
-  //     break;
-  // }
+  switch (req.params.type) {
+    case "new":
+      chooseTableToSave =
+        "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3, $4)";
+      values = [user_id, title, delta, annotation];
+      break;
+    case "edit":
+      chooseTableToSave =
+        "INSERT INTO suggested_edit (article_id, user_id, title, delta, annotation) VALUES ($1, $2, $3, $4, $5)";
+      values = [article_id, user_id, title, delta, annotation];
+      break;
+    case "delete":
+      chooseTableToSave =
+        "INSERT INTO suggested_deletion (article_id, user_id, annotation) VALUES ($1, $2, $3)";
+      values = [article_id, user_id, annotation];
+      break;
+    default:
+      break;
+  }
 
   try {
-    // Save the data to PostgreSQL
-    const result = await pool.query(
-      "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)",
-      [user_id, title, delta, comment]
-    );
+    const result = await pool.query(chooseTableToSave, values);
+
+    // // Save the data to PostgreSQL
+    // const result = await pool.query(
+    //   "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)",
+    //   [user_id, title, delta, comment]
+    // );
 
     res.status(200).json({ message: "Data received successfully" });
   } catch (error) {
@@ -128,40 +144,135 @@ app.post("/api/actions/save", async (req, res) => {
   }
 });
 
-app.post("/api/actions/manageSuggested", async (req, res) => {
+app.post("/api/actions/");
+
+app.post(
+  "/api/actions/manageSuggested",
+  authenticateToken,
+  async (req, res) => {
+    //console.log(req.body);
+    const { type, suggested_id, status } = req.body;
+
+    try {
+      // Save the data to PostgreSQL
+      let manageSuggestedQuery;
+
+      switch (type) {
+        case "new":
+          manageSuggestedQuery = `CALL process_suggested_new (\$1,\$2)`;
+          break;
+        case "edit":
+          manageSuggestedQuery = `CALL process_suggested_edit (\$1,\$2)`;
+          break;
+        case "deletion":
+          manageSuggestedQuery = `CALL process_suggested_deletion (\$1,\$2)`;
+          break;
+        default:
+          break;
+      }
+
+      const result = await pool.query(manageSuggestedQuery, [
+        suggested_id,
+        status,
+      ]);
+
+      res.status(200).json({
+        message: "Suggstion managed successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving data to PostgreSQL:", error);
+      res.status(500).json({ message: "Error saving data", error });
+    }
+  }
+);
+
+app.post("/api/login", async (req, res) => {
+  const { login, password } = req.body;
   console.log(req.body);
-  const { type, suggested_id, status } = req.body;
 
   try {
-    // Save the data to PostgreSQL
-    let manageSuggestedQuery;
+    //trying to get user data
+    const result = await pool.query(
+      "SELECT * FROM get_user_by_credentials($1, $2)",
+      [login, password]
+    );
+    const { o_id, o_nickname, o_role_name } = result.rows[0];
+    // check if not null
+    if (o_id && o_nickname && o_role_name) {
+      const accessToken = generateAccessToken(o_id, o_nickname, o_role_name);
+      const refreshToken = generateRefreshToken(o_id);
 
-    switch (type) {
-      case "new":
-        manageSuggestedQuery = `CALL process_suggested_new (\$1,\$2)`;
-        break;
-      case "edit":
-        manageSuggestedQuery = `CALL process_suggested_edit (\$1,\$2)`;
-        break;
-      case "delete":
-        manageSuggestedQuery = `CALL process_suggested_deletion (\$1,\$2)`;
-        break;
-      default:
-        break;
+      // Set cookies with HTTP-only flags
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        //secure: process.env.NODE_ENV === "production", // Use secure in production
+        sameSite: "Strict",
+        maxAge: 5 * 60 * 1000, // 5 minutes
+      });
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        //secure: process.env.NODE_ENV === "production", // Use secure in production
+        sameSite: "Strict",
+        maxAge: 10 * 60 * 1000, //7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+
+      res.status(200).json({
+        message: `${o_nickname} logged in as ${o_role_name}`,
+        //accessToken,
+      });
+    } else {
+      res.status(401).json({ message: "invalid data" });
     }
-
-    const result = await pool.query(manageSuggestedQuery, [
-      suggested_id,
-      status,
-    ]);
-
-    res.status(200).json({
-      message: "Suggstion managed successfully.",
-    });
   } catch (error) {
-    console.error("Error saving data to PostgreSQL:", error);
-    res.status(500).json({ message: "Error saving data", error });
+    res.status(500).json({ message: "Internal server error", error });
   }
+});
+
+function authenticateToken(req, res, next) {
+  const accessToken = req.cookies.accessToken; // Read token from cookies
+  console.log(accessToken);
+
+  if (!accessToken) return res.sendStatus(401); // Unauthorized
+
+  jwt.verify(accessToken, JWT_ACCESS_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403); // Forbidden
+    req.user = user;
+    next();
+  });
+}
+
+function generateAccessToken(id, nickname, role) {
+  return jwt.sign({ id, nickname, role }, JWT_ACCESS_SECRET, {
+    expiresIn: "5m",
+  });
+}
+function generateRefreshToken(id) {
+  return jwt.sign({ id }, JWT_REFRESH_SECRET, { expiresIn: "10m" });
+}
+
+app.post("/api/token", (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (!refreshToken) return res.sendStatus(401); // Unauthorized
+
+  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403); // Forbidden
+
+    const accessToken = generateAccessToken(user.id, user.nickname, user.role);
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      //secure: process.env.NODE_ENV === "production",
+      sameSite: "Strict",
+      maxAge: 5 * 60 * 1000, // 5 minutes
+    });
+    res.status(200).json({ accessToken });
+  });
+});
+
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("accessToken");
+  res.clearCookie("refreshToken");
+  res.sendStatus(204); // No Content
 });
 
 app.listen(PORT, () => {

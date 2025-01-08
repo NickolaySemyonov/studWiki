@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { QuillDeltaToHtmlConverter } from "quill-delta-to-html";
 import DOMPurify from "dompurify";
 import ContentWrapper from "./ContentWrapper";
@@ -14,9 +14,8 @@ export default function Article() {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/articles/${articleId}`
-        );
+        const apiUrl = import.meta.env.VITE_API_BASE_URL;
+        const response = await fetch(`${apiUrl}/api/articles/${articleId}`);
         if (!response.ok) {
           throw new Error("Failed to fetch article");
         }
@@ -56,6 +55,18 @@ export default function Article() {
       </div>
       <div>
         <strong>Last Editor: </strong> {article.editor}
+      </div>
+      <div>
+        <Link to={`/editor/${articleId}`}>
+          <button className="w-20 bg-indigo-500 text-white font-semibold py-2 rounded-md hover:bg-indigo-700 transition duration-200">
+            Edit article
+          </button>
+        </Link>{" "}
+        <Link to={`/delete/${articleId}`}>
+          <button className="w-40 bg-red-900  text-white font-semibold py-2 rounded-md hover:bg-red-950 transition duration-200">
+            Request to delete
+          </button>
+        </Link>
       </div>
       <br />
       <div

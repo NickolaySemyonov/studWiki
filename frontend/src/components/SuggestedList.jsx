@@ -18,41 +18,123 @@ export default function SuggestedList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchSuggestedItems = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/suggested/all");
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
+  // const fetchSuggestedItems = async () => {
+  //   try {
+  //     const apiUrl = import.meta.env.VITE_API_BASE_URL;
+  //     const response = await fetch(`${apiUrl}/api/suggested/all`, {
+  //       method: "GET",
+  //       credentials: "include",
+  //     });
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setSuggestedItems(data);
+  //     } else if (response.status === 401) {
+  //       try {
+  //         const response = await fetch(`${apiUrl}/api/token`, {
+  //           method: "POST",
+  //           credentials: "include", // Включает куки в запрос
+  //         });
+  //         if (response.ok)
+  //           await fetch(`${apiUrl}/api/suggested/all`, {
+  //             method: "GET",
+  //             credentials: "include",
+  //           });
+  //         else if (response.status === 401) {
+  //           setError("Log in as Admin to view this page");
+  //         }
+  //       } catch (error) {
+  //         setError(error.message);
+  //       }
+  //     } else {
+  //       throw new Error("Network response was not ok");
+  //     }
+  //   } catch (error) {
+  //     setError(error.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // useEffect(() => {
+  //   fetchSuggestedItems();
+  // }, []);
+
+  const fetchSuggestedItems = async () => {
+    setLoading(true); // Start loading
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetchSuggestedItemsFromApi(apiUrl);
+
+      if (response.ok) {
         const data = await response.json();
         setSuggestedItems(data);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
+      } else if (response.status === 401) {
+        await handleUnauthorized(apiUrl);
+      } else {
+        throw new Error("Network response was not ok");
       }
-    };
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false); // End loading
+    }
+  };
+
+  const fetchSuggestedItemsFromApi = async (apiUrl) => {
+    return await fetch(`${apiUrl}/api/suggested/all`, {
+      method: "GET",
+      credentials: "include",
+    });
+  };
+
+  const handleUnauthorized = async (apiUrl) => {
+    try {
+      const tokenResponse = await refreshAuthToken(apiUrl);
+
+      if (tokenResponse.ok) {
+        const retryResponse = await fetchSuggestedItemsFromApi(apiUrl);
+        if (retryResponse.ok) {
+          const data = await retryResponse.json();
+          setSuggestedItems(data);
+        } else if (retryResponse.status === 401) {
+          setError("Log in as Admin to view this page");
+        }
+      } else {
+        setError("Failed to refresh token");
+      }
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const refreshAuthToken = async (apiUrl) => {
+    return await fetch(`${apiUrl}/api/token`, {
+      method: "POST",
+      credentials: "include",
+    });
+  };
+
+  useEffect(() => {
     fetchSuggestedItems();
   }, []);
 
   const manageSuggested = async (data) => {
     console.log(data);
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/actions/manageSuggested",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        }
-      );
+      const apiUrl = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetch(`${apiUrl}/api/actions/manageSuggested`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
 
       if (response.ok) {
         console.log("Data sent successfully");
-        alert(`Article has been ${data.status}`);
+        //alert(`Article has been ${data.status}`);
         setSuggestedItems((prevItems) =>
           prevItems.filter((item) => item.suggested_id !== data.suggested_id)
         );
@@ -89,12 +171,16 @@ export default function SuggestedList() {
             }}
           >
             <div>
+              <strong>Type:</strong> {item.type}
+              <br />
               <strong>User ID:</strong> {item.user_id} <br />
               <strong>Date:</strong> {formatDate(item.date)} <br />
-              <strong>Type:</strong> {item.type}
+              <strong>Annotation: </strong>
+              <br />
+              <span className="break-normal mt-2">{item.annotation}</span>
             </div>
 
-            <div className="space-x-4">
+            <div className="flex space-x-4 ">
               <button
                 className="px-2 bg-emerald-600 text-white font-semibold py-2 rounded-md hover:bg-emerald-800 transition duration-200"
                 onClick={() =>
@@ -108,7 +194,7 @@ export default function SuggestedList() {
                 Принять
               </button>
               <button
-                className="px-2 bg-rose-700 text-white font-semibold py-2 rounded-md hover:bg-rose-900 transition duration-200"
+                className=" bg-rose-700 text-white font-semibold py-2 rounded-md hover:bg-rose-900 transition duration-200"
                 onClick={() =>
                   manageSuggested({
                     type: item.type,

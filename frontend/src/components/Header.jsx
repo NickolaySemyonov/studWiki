@@ -26,6 +26,10 @@ export default function Header() {
         >
           Suggested(all)
         </Link>
+        <div className=" min-h-[1em] w-px self-stretch bg-gradient-to-tr from-transparent via-neutral-400 to-transparent opacity-25"></div>
+        <Link to="/login" className="text-white text-lg hover:underline">
+          Login
+        </Link>
       </nav>
     </header>
   );
