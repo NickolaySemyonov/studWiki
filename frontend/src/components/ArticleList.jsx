@@ -11,7 +11,13 @@ export default function ArticleList() {
     const fetchArticleList = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${apiUrl}/api/articles/`);
+        const response = await fetch(`${apiUrl}/api/articles/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch articles");
         }

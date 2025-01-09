@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import ContentWrapper from "./ContentWrapper";
-
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,10 +36,12 @@ export default function Login() {
       if (!response.ok) {
         throw new Error("Ошибка входа. Проверьте свои учетные данные.");
       }
-
+      if (response.ok) {
+        alert("Logged in!");
+      }
       const data = await response.json();
       console.log("Успешный вход:", data);
-
+      navigate("/");
       // Здесь вы можете обработать успешный вход, например, сохранить токены
 
       // Очистка формы

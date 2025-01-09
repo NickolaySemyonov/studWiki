@@ -52,9 +52,11 @@ app.use(
   })
 );
 
-
 // Sample route
 app.get("/api/suggested/all", authenticateToken, async (req, res) => {
+  const { id, nickname, role } = req.user;
+  if (role !== "Admin") return res.status(403);
+
   try {
     const result = await pool.query("SELECT * FROM suggested_all"); // VIEW
     res.status(200).json(result.rows);
@@ -64,12 +66,15 @@ app.get("/api/suggested/all", authenticateToken, async (req, res) => {
   }
 });
 
-app.get("/api/articles/:id", async (req, res) => {
+app.get("/api/articles/:id", authenticateToken, async (req, res) => {
+  const { id, nickname, role } = req.user;
+  if (role === "Banned") return res.status(403);
+
   const articleId = parseInt(req.params.id);
   try {
     const result = await pool.query(
       `
-          SELECT * FROM latest_article_versions WHERE article_id = \$1
+          SELECT * FROM latest_article_versions WHERE article_id = $1
       `,
       [articleId]
     );
@@ -84,7 +89,10 @@ app.get("/api/articles/:id", async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
-app.get("/api/articles/", async (req, res) => {
+app.get("/api/articles/", authenticateToken, async (req, res) => {
+  const { id, nickname, role } = req.user;
+
+  if (role === "Banned") return res.status(403);
   try {
     const result = await pool.query(
       `
@@ -103,16 +111,15 @@ app.get("/api/articles/", async (req, res) => {
   }
 });
 
-
 app.post("/api/actions/save/:type", authenticateToken, async (req, res) => {
   const { article_id, title, delta, annotation } = req.body;
   const user = req.user;
-  // console.log("Received data:", { user_id, title, delta, comment });
+
   let chooseTableToSave;
   let values;
-  const {id, nickname, role} = user;
-  console.log(user);
-
+  const { id, nickname, role } = user;
+  //console.log(user);
+  if (role === "Banned") return res.status(403);
   switch (req.params.type) {
     case "new":
       chooseTableToSave =
@@ -135,13 +142,6 @@ app.post("/api/actions/save/:type", authenticateToken, async (req, res) => {
 
   try {
     const result = await pool.query(chooseTableToSave, values);
-
-    // // Save the data to PostgreSQL
-    // const result = await pool.query(
-    //   "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3,$4)",
-    //   [user_id, title, delta, comment]
-    // );
-
     res.status(200).json({ message: "Data received successfully" });
   } catch (error) {
     console.error("Error saving data to PostgreSQL:", error);
@@ -149,14 +149,14 @@ app.post("/api/actions/save/:type", authenticateToken, async (req, res) => {
   }
 });
 
-
 app.post(
   "/api/actions/manageSuggested",
   authenticateToken,
   async (req, res) => {
     //console.log(req.body);
+    const { id, nickname, role } = req.user;
     const { type, suggested_id, status } = req.body;
-
+    if (role !== "Admin") return res.status(403);
     try {
       // Save the data to PostgreSQL
       let manageSuggestedQuery;

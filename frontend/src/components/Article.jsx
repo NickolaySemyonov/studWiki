@@ -4,7 +4,6 @@ import { QuillDeltaToHtmlConverter } from "quill-delta-to-html";
 import DOMPurify from "dompurify";
 import ContentWrapper from "./ContentWrapper";
 
-
 export default function Article() {
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +15,13 @@ export default function Article() {
     const fetchArticle = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_BASE_URL;
-        const response = await fetch(`${apiUrl}/api/articles/${articleId}`);
+        const response = await fetch(`${apiUrl}/api/articles/${articleId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch article");
         }

@@ -84,6 +84,9 @@ export default function SuggestedList() {
   const fetchSuggestedItemsFromApi = async (apiUrl) => {
     return await fetch(`${apiUrl}/api/suggested/all`, {
       method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
       credentials: "include",
     });
   };
@@ -111,6 +114,9 @@ export default function SuggestedList() {
   const refreshAuthToken = async (apiUrl) => {
     return await fetch(`${apiUrl}/api/token`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       credentials: "include",
     });
   };
