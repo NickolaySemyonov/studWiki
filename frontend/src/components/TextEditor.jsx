@@ -49,7 +49,7 @@ export default function MyEditor() {
         }
         const data = await response.json();
         console.log(data);
-
+        setTitle(data.title);
         setDeltaFromJSON(quillRef, data.delta);
       } catch (err) {
         console.log(err.message);

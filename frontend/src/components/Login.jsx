@@ -57,7 +57,7 @@ export default function Login() {
 
   return (
     <ContentWrapper>
-      <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+      <div className="max-w-md mx-auto p-6 bg-white rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Вход в систему</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
