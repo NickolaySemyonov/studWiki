@@ -52,6 +52,7 @@ app.use(
   })
 );
 
+
 // Sample route
 app.get("/api/suggested/all", authenticateToken, async (req, res) => {
   try {
@@ -102,27 +103,31 @@ app.get("/api/articles/", async (req, res) => {
   }
 });
 
-app.post("/api/actions/save/:type", async (req, res) => {
-  const { article_id, user_id, title, delta, annotation } = req.body;
-  //console.log("Received data:", { user_id, title, delta, comment });
+
+app.post("/api/actions/save/:type", authenticateToken, async (req, res) => {
+  const { article_id, title, delta, annotation } = req.body;
+  const user = req.user;
+  // console.log("Received data:", { user_id, title, delta, comment });
   let chooseTableToSave;
   let values;
+  const {id, nickname, role} = user;
+  console.log(user);
 
   switch (req.params.type) {
     case "new":
       chooseTableToSave =
         "INSERT INTO suggested_new (user_id, title, delta, annotation) VALUES ($1, $2, $3, $4)";
-      values = [user_id, title, delta, annotation];
+      values = [id, title, delta, annotation];
       break;
     case "edit":
       chooseTableToSave =
         "INSERT INTO suggested_edit (article_id, user_id, title, delta, annotation) VALUES ($1, $2, $3, $4, $5)";
-      values = [article_id, user_id, title, delta, annotation];
+      values = [article_id, id, title, delta, annotation];
       break;
     case "delete":
       chooseTableToSave =
         "INSERT INTO suggested_deletion (article_id, user_id, annotation) VALUES ($1, $2, $3)";
-      values = [article_id, user_id, annotation];
+      values = [article_id, id, annotation];
       break;
     default:
       break;
@@ -144,7 +149,6 @@ app.post("/api/actions/save/:type", async (req, res) => {
   }
 });
 
-app.post("/api/actions/");
 
 app.post(
   "/api/actions/manageSuggested",
@@ -237,6 +241,7 @@ function authenticateToken(req, res, next) {
   jwt.verify(accessToken, JWT_ACCESS_SECRET, (err, user) => {
     if (err) return res.sendStatus(403); // Forbidden
     req.user = user;
+    console.log(user);
     next();
   });
 }

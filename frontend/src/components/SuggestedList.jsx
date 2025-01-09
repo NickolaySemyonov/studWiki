@@ -173,7 +173,7 @@ export default function SuggestedList() {
             <div>
               <strong>Type:</strong> {item.type}
               <br />
-              <strong>User ID:</strong> {item.user_id} <br />
+              <strong>User:</strong> {item.user_nickname} <br />
               <strong>Date:</strong> {formatDate(item.date)} <br />
               <strong>Annotation: </strong>
               <br />

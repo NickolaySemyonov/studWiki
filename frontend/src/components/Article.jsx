@@ -4,6 +4,7 @@ import { QuillDeltaToHtmlConverter } from "quill-delta-to-html";
 import DOMPurify from "dompurify";
 import ContentWrapper from "./ContentWrapper";
 
+
 export default function Article() {
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);

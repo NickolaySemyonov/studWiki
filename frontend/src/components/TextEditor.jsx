@@ -4,6 +4,7 @@ import Quill from "quill";
 import ContentWrapper from "./ContentWrapper";
 import { useParams } from "react-router-dom";
 
+
 const Delta = Quill.import("delta");
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -34,12 +35,14 @@ export default function MyEditor() {
 
   useEffect(() => {
     const fetchDeltaFromApi = async () => {
+      if(articleId === null) return;
       try {
         const response = await fetch(`${apiUrl}/api/articles/${articleId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
         });
         if (!response.ok) {
           throw new Error("Failed to fetch article");
@@ -75,6 +78,7 @@ export default function MyEditor() {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify(data),
         });
       } else {
@@ -90,6 +94,7 @@ export default function MyEditor() {
           headers: {
             "Content-Type": "application/json",
           },
+          credentials: "include",
           body: JSON.stringify(data),
         });
       }

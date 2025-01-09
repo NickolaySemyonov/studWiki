@@ -9,12 +9,14 @@ import Article from "./components/Article";
 import ArticleList from "./components/ArticleList";
 import SuggestedList from "./components/SuggestedList";
 import Login from "./components/Login";
+import DeletionForm from "./components/DeletionForm";
 export default function App() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow bg-gray-100 pl-calc-full">
         <Routes>
+          <Route path="/delete/:articleId" element={<DeletionForm/>}/>
           <Route path="/" element={<HomePage />} />
           <Route path="/editor" element={<TextEditor />} />
           <Route path="/editor/:articleId" element={<TextEditor />} />
